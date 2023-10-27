@@ -1,4 +1,4 @@
-function dz = quadrotor(t, z, u, p, r, n)
+function dz = quadrotor(t, z, p, r, n, zd)
 % State vector definition
 %
 %      x1, x2, x3, phi, theta, psi, dx1, dx2, dx3, omega1, omega2, omega3
@@ -19,11 +19,16 @@ R = [ cos(z(5))*cos(z(6)), sin(z(4))*sin(z(5))*cos(z(6)) - cos(z(4))*sin(z(6)), 
       cos(z(5))*sin(z(6)), cos(z(4))*cos(z(6)) + sin(z(4))*sin(z(5))*sin(z(6)), cos(z(4))*sin(z(5))*sin(z(6)) - sin(z(4))*cos(z(6));
                -sin(z(5)),                                 sin(z(4))*cos(z(5)),                                 cos(z(4))*cos(z(5))];
 
-           
+K = [0	0	0.0645497224367903	0	0	0.0645497224367898	0	0	0.142492446381779	0	0	2.82989968882797;
+     0	0	0.0645497224367903	5.98384078259183	0	0	0	0	0.142492446381779	6.09164560569660	0	0;
+     0.0912870929175277	0	0.0645497224367903	0	5.98384078259184	0.0645497224367894	0.345975089262573	0	0.142492446381779	0	6.09164560569661	2.82989968882795;
+     0	0.0912870929175276	0.0645497224367903	0	0	0	0	0.345975089262572	0.142492446381779	0	0	0];
+u = -K*(z - zd) + p(3) * p(1) / 4
+
+% [u;z(5)]
 
 % Adjusting thrust output based on feasible limits
-u = max( min(u, p(7)), 0);
-
+u = max(min(u, p(7)), 0);
 
 % Computing temporrary variables
 
@@ -31,7 +36,6 @@ u = max( min(u, p(7)), 0);
 rt = [                   ( u(2) - u(4) )*p(2); 
                          ( u(3) - u(1) )*p(2); 
            ( u(1) - u(2) + u(3) - u(4) )*p(8)];
-
 
 % Computing time derivative of the state vector
 dz(1:3,1) = z(7:9,1);

@@ -14,18 +14,19 @@ p = [g l m I mu sigma];
 
 % Initial conditions
 z0 = zeros(12,1);
+zd = [5;5;5;zeros(9,1)];
 
 
 r = [0; 0; 0];
 n = [0; 0; 0];
-u = [1; 1.9; 1.9; 1.5];
+u = [0; 0; 0; 0];
 
 
 %% Solving the initial-value problem
 
-t = linspace(0, 3, 200);
+t = linspace(0, 60, 600);
 
-[t,z] = ode45(@(t,z) quadrotor(t, z, u, p, r, n), t, z0);
+[t,z] = ode45(@(t,z) quadrotor(t, z, p, r, n, zd), t, z0);
 
 
 %% Plotting the results
@@ -68,9 +69,9 @@ airspace_box_length = 4;
 
 animation_axes = axes('Parent', animation_fig,...
     'NextPlot','add','DataAspectRatio',[1 1 1],...
-    'Xlim',airspace_box_length*[-0.5 0.5],...
-    'Ylim',airspace_box_length*[-0.5 0.5],...
-    'Zlim',airspace_box_length*[0 1],...
+    'Xlim',airspace_box_length*[-2.5 2.5],...
+    'Ylim',airspace_box_length*[-2.5 2.5],...
+    'Zlim',airspace_box_length*[0 2.5],...
     'box','on','Xgrid','on','Ygrid','on','Zgrid','on',...
     'TickLabelInterpreter','LaTeX','FontSize',14);
 
