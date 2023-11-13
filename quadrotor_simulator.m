@@ -11,24 +11,29 @@ sigma = 0.01; % The proportionality constant relating thrust to torque [m]
 
 p = [g l m I mu sigma];
 
-
-% Initial conditions
-z0 = zeros(12,1);
-zd = [5;5;5;zeros(9,1)];
-
-
 r = [0; 0; 0];
 n = [0; 0; 0];
-u = [0; 0; 0; 0];
 
+
+[A,B,K] = quadrotor_modeling;
+u = @(z, zd) p(3) * p(1) / 4 + K*(zd - z);
+% u = @(t,z,p,zd, A, B, K) quadrotor_feedback_linearization(t,z,p,zd, A,B,K);
 
 %% Solving the initial-value problem
-
-t = linspace(0, 60, 600);
-
-[t,z] = ode45(@(t,z) quadrotor(t, z, p, r, n, zd), t, z0);
-
-
+max = 2*pi;
+speed = 100;
+tspan = linspace(0, speed*max, speed*max*100);
+% Initial conditions
+z0 = zeros(12,1);
+zd = @(t) [10*sin(t/speed); 10*cos(t/speed); sin(t/(speed/10))+10*t/tspan(end);zeros(9,1)];
+% Linear form
+[t,z] = ode45(@(t,z) quadrotor(t, z, u(z, zd(t)), p, r, n), tspan, z0);
+[t2,z2] = ode45(@(t,z) quadrotor(t, z, u(z, z0), p, r, n), tspan, z(end,:));
+% Feedback Linearization
+% [t,z] = ode45(@(t,z) quadrotor(t, z, u(t,z, p, zd(t), A,B,K), p, r, n), tspan, z0);
+% [t2,z2] = ode45(@(t,z) quadrotor(t, z, u(t,z, p, z0, A,B,K), p, r, n), tspan, z(end,:));
+t = [t;t2+t(end)];
+z = [z;z2];
 %% Plotting the results
 
 for i=1:4
@@ -60,7 +65,22 @@ legend(ax(4), {'$\omega_1$', '$\omega_2$', '$\omega_3$'},...
     'Interpreter', 'LaTeX', 'FontSize', 14);
 title(ax(4), '\boldmath$\omega$','Interpreter','LaTeX','FontSize',14);
 
-
+%% trajectory vs measured
+figure(2)
+hold on
+plot3(z(:,1), z(:,2), z(:,3))
+trajectory = zeros(length(tspan),12);
+idx = 1;
+for time = tspan
+    trajectory(idx,:) = zd(time);
+    idx=idx+1;
+end
+plot3(trajectory(:,1),trajectory(:,2),trajectory(:,3), Color='r');
+view(3)
+hold off
+xlabel("x1")
+ylabel("x2")
+zlabel("x3")
 
 %% Animation
 animation_fig = figure;
@@ -104,6 +124,7 @@ for k=1:length(t)
         set(rotor(i), 'XData', pose(:,1), 'YData', pose(:,2),  'ZData', pose(:,3) );
          
     end
+    % plot3(zd(1,:), zd(2,:), zd(3,:), Color='r');
     set(silhouette,'XData', [0, z(k,1), z(k,1), z(k,1)],...
         'YData', [0, 0, z(k,2), z(k,2)],...
         'ZData', [0, 0, 0, z(k,3)]);
