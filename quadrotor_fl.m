@@ -1,4 +1,4 @@
-function dz = quadrotor(t, z, u, p, r, n)
+function dz = quadrotor(t, z, u, p, r, n, zd)
 % State vector definition
 %
 %      x1, x2, x3, phi, theta, psi, dx1, dx2, dx3, omega1, omega2, omega3
@@ -25,9 +25,9 @@ u = max(min(u, p(7)), 0)
 % Computing temporrary variables
 
 % rt = torque vector induced by rotor thrusts
-rt = [                   ( u(2) - u(4) )*p(2); 
-                         ( u(3) - u(1) )*p(2); 
-           ( u(1) - u(2) + u(3) - u(4) )*p(8)];
+rt = [                   u(2); 
+                         u(3); 
+                         u(4)];
 
 % Computing time derivative of the state vector
 dz(1:3,1) = z(7:9,1);
@@ -36,6 +36,6 @@ dz(4:6,1) = [ z(10) + z(12)*cos(z(4))*tan(z(5)) + z(11)*sin(z(4))*tan(z(5));
                                           z(11)*cos(z(4)) - z(12)*sin(z(4));
                               (z(12)*cos(z(4)) + z(11)*sin(z(4)))/cos(z(5))];
                       
-dz(7:9,1) = R*([0; 0; sum(u)] + r)/p(3) - [0; 0; p(1)];
+dz(7:9,1) = R*([0; 0; u(1)] + r)/p(3) - [0; 0; p(1)];
 
 dz(10:12,1) = I\( rt + n - cross( z(10:12,1) , I * z(10:12,1) ) );

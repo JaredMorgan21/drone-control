@@ -17,9 +17,7 @@ n = [0; 0; 0];
 
 [A,B,K] = quadrotor_modeling;
 % u = @(z, zd) p(3) * p(1) / 4 + K*(zd - z);
-% u = @(t,z,p,zd, A, B, K) quadrotor_feedback_linearization(t,z,p,zd, A,B,K);
-v = [0;0;0;0];
-u = @(tdiff,z,p,v) quadrotor_feedback_linearization(tdiff,z,p,v);
+[u, xi, zeta] = @(z) quadrotor_feedback_linearization(tdiff,z,p,v,xi,zeeta);
 
 %% Solving the initial-value problem
 max = 2*pi;
@@ -35,11 +33,11 @@ fplot(UAV)
 view(3)
 figure(1)
 % Linear form
-% [t,z] = ode45(@(t,z) quadrotor(t, z, u(z, zd(t)), p, r, n), tspan, z0);
-% [t2,z2] = ode45(@(t,z) quadrotor(t, z, u(z, z0), p, r, n), tspan, z(end,:));
+[t,z] = ode45(@(t,z) quadrotor(t, z, u(z, zd(t)), p, r, n), tspan, z0);
+[t2,z2] = ode45(@(t,z) quadrotor(t, z, u(z, z0), p, r, n), tspan, z(end,:));
 % Feedback Linearization
-[t,z] = ode45(@(t,z) quadrotor_fl(t, z, u(tspan(2)-tspan(1),z,p,v), p, r, n), tspan, z0);
-[t2,z2] = ode45(@(t,z) quadrotor_fl(t, z, u(tdiff,z,p,v,xi,zeta), p, r, n), tspan, z(end,:));
+% [t,z] = ode45(@(t,z) quadrotor(t, z, u(t,z, p, zd(t), A,B,K), p, r, n), tspan, z0);
+% [t2,z2] = ode45(@(t,z) quadrotor(t, z, u(t,z, p, z0, A,B,K), p, r, n), tspan, z(end,:));
 t = [t;t2+t(end)];
 z = [z;z2];
 %% Plotting the results

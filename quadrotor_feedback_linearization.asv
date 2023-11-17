@@ -36,24 +36,19 @@ function u = quadrotor_feedback_linearization(tdiff, z, p, v)
     % % w = [zeros([6,1]);0;0;0;0;0;0];
     % 
     % u = g\(w - f);
-    persistent xi;
-    persistent zeta;
-
-    if isempty(xi)
-        xi = 0;
-        zeta = 0;
-    end
-
+    global xi;
+    global zeta;
     v = [p(3)*p(1);0;0;0];
 
     delta = [(sin(z(4))*sin(z(6)) + cos(z(4))*sin(z(5))*cos(z(6)))/p(3) 0 0 0;
              (sin(z(4))*sin(z(6)) + cos(z(4))*sin(z(5))*cos(z(6)))/p(3) 0 0 0;
              (sin(z(4))*sin(z(6)) + cos(z(4))*sin(z(5))*cos(z(6)))/p(3) 0 0 0;
-             0 0 sin(z(4))/(cos(z(5))*p(5)) cos(z(4))/(cos(z(5))*p(6))]
+             0 0 sin(z(4))/(cos(z(5))*p(5)) cos(z(4))/(cos(z(5))*p(6))];
     b = [z(7);
          z(8);
          z(9);
          sin(z(4))/cos(z(5))*z(11)+cos(z(4))/cos(z(5))*z(12)];
+
     alpha = -delta\b;
     beta = delta;
 
