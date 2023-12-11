@@ -11,12 +11,22 @@ sigma = 0.01; % The proportionality constant relating thrust to torque [m]
 
 p = [g l m I mu sigma];
 
-r = [0; 0; 0];
-n = [0; 0; 0];
+r1 = [0; 0; 0];
+n1 = [0; 0; 0];
 
+r2 = [0; 0; 0];
+n2 = [0; 0; 0.01];
 
-[A,B,K] = quadrotor_modeling;
-u = @(z, zd) p(3) * p(1) / 4 + K*(zd - z);
+[A,B,K] = quadrotor_modeling();
+Ki = K;
+Ki(:,1:3) = 0.1*Ki(:,1:3);
+Ki(:,4:6) = 0*Ki(:,4:6);
+Ki(:,7:9) = 0.1*Ki(:,7:9);
+Ki(:,10:12) = 0.1*Ki(:,10:12);
+
+u1 = @(z, zd) p(3) * p(1) / 4 + K*(zd(1:12) - z(1:12));
+u2 = @(z, zd) p(3) * p(1) / 4 + K*(zd(1:12) - z(1:12)) - Ki*z(13:24);
+
 % u = @(t,z,p,zd, A, B, K) quadrotor_feedback_linearization(t,z,p,zd, A,B,K);
 
 %% Solving the initial-value problem
@@ -24,11 +34,12 @@ max = 2*pi;
 speed = 100;
 tspan = linspace(0, speed*max, speed*max*100);
 % Initial conditions
-z0 = zeros(12,1);
-zd = @(t) [10*sin(t/speed); 10*cos(t/speed); sin(t/(speed/10))+10*t/tspan(end);zeros(9,1)];
+z0 = zeros(24,1);
+UAV = @(t) [sin(t); cos(t); t];
+zd = @(t) [10*sin(t/speed); 10*cos(t/speed); sin(t/(speed/10))+10*t/tspan(end);zeros(21,1)];
 % Linear form
-[t,z] = ode45(@(t,z) quadrotor(t, z, u(z, zd(t)), p, r, n), tspan, z0);
-[t2,z2] = ode45(@(t,z) quadrotor(t, z, u(z, z0), p, r, n), tspan, z(end,:));
+[t,z] = ode45(@(t,z) quadrotor(t, z, u1(z, zd(t)), p, r1, n1, zd(t)), tspan, z0);
+[t2,z2] = ode45(@(t,z, eta) quadrotor(t, z, u2(z, z0), p, r2, n2, z0), tspan, z(end,:));
 % Feedback Linearization
 % [t,z] = ode45(@(t,z) quadrotor(t, z, u(t,z, p, zd(t), A,B,K), p, r, n), tspan, z0);
 % [t2,z2] = ode45(@(t,z) quadrotor(t, z, u(t,z, p, z0, A,B,K), p, r, n), tspan, z(end,:));
@@ -69,7 +80,7 @@ title(ax(4), '\boldmath$\omega$','Interpreter','LaTeX','FontSize',14);
 figure(2)
 hold on
 plot3(z(:,1), z(:,2), z(:,3))
-trajectory = zeros(length(tspan),12);
+trajectory = zeros(length(tspan),24);
 idx = 1;
 for time = tspan
     trajectory(idx,:) = zd(time);
