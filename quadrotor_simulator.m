@@ -77,21 +77,27 @@ legend(ax(4), {'$\omega_1$', '$\omega_2$', '$\omega_3$'},...
 title(ax(4), '\boldmath$\omega$','Interpreter','LaTeX','FontSize',14);
 
 %% trajectory vs measured
-figure(2)
+h_trajectory = figure(2);
 hold on
-plot3(z(:,1), z(:,2), z(:,3))
+plot3(z(:,1), z(:,2), z(:,3),'Color','red','LineWidth',1)
 trajectory = zeros(length(tspan),24);
 idx = 1;
 for time = tspan
     trajectory(idx,:) = zd(time);
     idx=idx+1;
 end
-plot3(trajectory(:,1),trajectory(:,2),trajectory(:,3), Color='r');
+plot3(trajectory(:,1),trajectory(:,2),trajectory(:,3), 'Color','black','LineWidth',1,'LineStyle','--');
 view(3)
 hold off
 xlabel("x1")
 ylabel("x2")
 zlabel("x3")
+legend('Controlled Drone','UAV', 'Location','best')
+grid on
+
+exportgraphics(h_trajectory,'fig_trajectory.pdf','ContentType','vector')
+
+return
 
 %% Animation
 animation_fig = figure;
