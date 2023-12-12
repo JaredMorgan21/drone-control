@@ -11,43 +11,74 @@ sigma = 0.01; % The proportionality constant relating thrust to torque [m]
 
 p = [g l m I mu sigma];
 
-r1 = [0; 0; 0];
-n1 = [0; 0; 0];
+r = [0; 0; 0];
+n = [0; 0; 0];
 
-r2 = [0; 0; 0];
-n2 = [0; 0; 0];
 
-[A,B,K] = quadrotor_modeling();
-Ki = K;
-Ki(:,1:3) = 0.1*Ki(:,1:3);
-Ki(:,4:6) = 0*Ki(:,4:6);
-Ki(:,7:9) = 0.1*Ki(:,7:9);
-Ki(:,10:12) = 0.1*Ki(:,10:12);
-
-u1 = @(z, zd) p(3) * p(1) / 4 + K*(zd(1:12) - z(1:12));
-u2 = @(z, zd) p(3) * p(1) / 4 + K*(zd(1:12) - z(1:12)) - Ki*z(13:24);
-
+[A,B,K] = quadrotor_modeling;
+u = @(z, zd) p(3) * p(1) / 4 + K*(zd - z);
 % u = @(t,z,p,zd, A, B, K) quadrotor_feedback_linearization(t,z,p,zd, A,B,K);
 
 %% Solving the initial-value problem
 max = 2*pi;
 speed = 100;
-tspan = linspace(0, speed*max, speed*max*100);
+% tspan = linspace(0, speed*max, speed*max*100);
+tspan = linspace(0, 300, 3000);
 % Initial conditions
-z0 = zeros(24,1);
-UAV = @(t) [sin(t); cos(t); t];
-% zd = @(t) [10*sin(t/speed); 10*cos(t/speed); sin(t/(speed/10))+10*t/tspan(end);zeros(21,1)];
-zd = @(t) [-10 + (10/2)*(t/speed); 10/2*sin(t/speed); 3*sin(t/(speed/10));zeros(21,1)];
-% z_acc = 0;
-% Linear form
-[t,z] = ode45(@(t,z) quadrotor_switch(t, z, u1(z, zd(t)),u2(z,zd(t)), p, r1, r2,n1,n2, zd(t)), tspan, z0);
-% [t2,z2] = ode45(@(t,z, eta) quadrotor(t, z, u2(z, z0), p, r2, n2, z0), tspan, z(end,:));
+z0 = zeros(12,1);
 
+x_ini = 0;
+y_ini = 5;
+z_ini = 5;
+x_d_ini = 0;
+y_d_ini = 0;
+z_d_ini = 0;
+position_init = [x_ini; y_ini; z_ini];
+velocity_init = [x_d_ini; y_d_ini; z_d_ini];
+t1 = 100; % time when target enters the area
+t2 = 110; % time when target acceleration stops
+
+x_d_const = 1/30;
+a_vel = x_d_const/(t2-t1);
+b_vel = -x_d_const*t1/(t2-t1);
+
+x_vel = @(t) x_d_ini + (a_vel*t + b_vel)*heaviside(t-t1) - ((a_vel*t + b_vel)*heaviside(t-t1))*heaviside(t-t2) + (x_d_const)*heaviside(t-t2); 
+x_pos = @(t) x_ini + (a_vel*t + b_vel)*heaviside(t-t1)*(t-t1) - (a_vel*t + b_vel)*heaviside(t-t2)*(t-t2) + (x_d_const)*heaviside(t-t2)*(t-t2);
+
+% x_pos = @(t) x_ini;
+% x_vel = @(t) x_d_ini;
+
+%
+zd = @(t) [
+            % x_ini + x_d_const*heaviside(t-t1)*(t-t1);
+            % x_ini + (a_vel*t + b_vel)*heaviside(t-t1) + (a_vel*t1 + b_vel)*heaviside(t-t2)*(t-t2);
+            x_pos(t) - 10*heaviside(t-t1);
+%             position_init;
+%            y_ini + 0 * heaviside(t-t1);
+            -x_pos(t);
+           -x_pos(t) + 10*heaviside(t-t1);
+           zeros(3,1);
+%            z_ini + 0 * heaviside(t-t1);
+        %    x_d_ini + x_d_const * heaviside(t-t1);
+           x_vel(t);
+%            velocity_init;
+            -x_vel(t);
+            -x_vel(t);
+%            y_d_ini + 0 * heaviside(t-t1);           
+%            z_d_ini + 0 * heaviside(t-t1);
+           zeros(3,1)];
+%}
+
+% zd = @(t) [10*sin(t/speed); 10*cos(t/speed); sin(t/(speed/10))+10*t/tspan(end);zeros(9,1)];
+% Linear form
+[t,z] = ode45(@(t,z) quadrotor(t, z, u(z, zd(t)), p, r, n), tspan, z0);
+% [t2,z2] = ode45(@(t,z) quadrotor(t, z, u(z, z0), p, r, n), tspan, z(end,:));
 % Feedback Linearization
 % [t,z] = ode45(@(t,z) quadrotor(t, z, u(t,z, p, zd(t), A,B,K), p, r, n), tspan, z0);
 % [t2,z2] = ode45(@(t,z) quadrotor(t, z, u(t,z, p, z0, A,B,K), p, r, n), tspan, z(end,:));
 % t = [t;t2+t(end)];
 % z = [z;z2];
+
 %% Plotting the results
 
 for i=1:4
@@ -79,31 +110,103 @@ legend(ax(4), {'$\omega_1$', '$\omega_2$', '$\omega_3$'},...
     'Interpreter', 'LaTeX', 'FontSize', 14);
 title(ax(4), '\boldmath$\omega$','Interpreter','LaTeX','FontSize',14);
 
+% return
+%%
+
+
+
 %% trajectory vs measured
-h_trajectory = figure(2);
-hold on
-plot3(z(:,1), z(:,2), z(:,3),'Color','red','LineWidth',1)
-trajectory = zeros(length(tspan),24);
+
+
+trajectory = zeros(length(tspan),12);
 idx = 1;
-for time = tspan
-    trajectory(idx,:) = zd(time);
-    idx=idx+1;
-end
-plot3(trajectory(:,1),trajectory(:,2),trajectory(:,3), 'Color','black','LineWidth',1,'LineStyle','--');
-view(3)
-hold off
-xlabel("x1")
-ylabel("x2")
-zlabel("x3")
-legend('Controlled Drone','UAV', 'Location','best')
+    for time = tspan
+        trajectory(idx,:) = zd(time);
+        idx=idx+1;
+    end
+
+
+%
+
+t_start = 1;
+t_end = 250;
+t_res = 40;
+ for t_count=t_start*10:t_res:(t_end)*10
+    figure(2)
+    set(gcf, 'Position',  [100, 100, 1000, 400])
+    subplot(1,2,1)
+    hold on
+    % hold on
+    scatter3(z(t_count,1), z(t_count,2), z(t_count,3),'filled','MarkerFaceColor','blue');
+    hold on
+    scatter3(trajectory(t_count,1),trajectory(t_count,2),trajectory(t_count,3),'filled','MarkerFaceColor','red');
+    view(2)
+    % hold off
+    xlabel("x1")
+    ylabel("x2")
+    zlabel("x3")
+    xlim([-10 10])
+    ylim([-10 10])
+    zlim([-10 10])
+    legend("measured", "desired")
+    grid on
+    disp(t_count)
+    title(sprintf('t = %.1f', t(t_count)));
+    % axis equal
+    % drawnow
+    % pause(0.01)
+
+    subplot(1,2,2)
+    hold on
+    % hold on
+    scatter3(z(t_count,1), z(t_count,2), z(t_count,3),'filled','MarkerFaceColor','blue');
+    hold on
+    scatter3(trajectory(t_count,1),trajectory(t_count,2),trajectory(t_count,3),'filled','MarkerFaceColor','red');
+    view(3)
+    % hold off
+    xlabel("x1")
+    ylabel("x2")
+    zlabel("x3")
+    xlim([-10 10])
+    ylim([-10 10])
+    zlim([-10 10])
+    % legend("measured", "desired")
+    grid on
+    disp(t_count)
+    title(sprintf('t = %.1f', t(t_count)));
+    % axis equal
+    drawnow
+    pause(0.01)
+
+end 
+%}
+
+
+
+figure
+error = z(:,1:3) - trajectory(:,1:3);
+error_vel = z(:,7:9) - trajectory(:,7:9);
+subplot(2,1,1)
+hold on
+plot(t,error(:,1),"LineWidth",1.5);
+plot(t,error(:,2),"LineWidth",1.5);
+plot(t,error(:,3),"LineWidth",1.5);
+legend("x1","x2","x3")
+ylabel("error position [m]")
+xlabel("time [s]")
 grid on
-xlim([-10 10])
-ylim([-10 10])
-zlim([-10 10])
 
-% plot3(0,0,0,'filled')
+subplot(2,1,2)
+hold on
+plot(t,error_vel(:,1),"LineWidth",1.5);
+plot(t,error_vel(:,2),"LineWidth",1.5);
+plot(t,error_vel(:,3),"LineWidth",1.5);
+legend("x_{d1}", "x_{d2}", "x_{d3}")
+ylabel("error velocity [m/s]")
+% xlabel("time [s]")
+grid on
 
-% exportgraphics(h_trajectory,'fig_trajectory.pdf','ContentType','vector')
+% axis equal
 
 return
 
