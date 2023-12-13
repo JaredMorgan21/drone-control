@@ -24,7 +24,7 @@ Ki(:,4:6) = 0*Ki(:,4:6);
 Ki(:,7:9) = 0.1*Ki(:,7:9);
 Ki(:,10:12) = 0.1*Ki(:,10:12);
 
-u1 = @(z, zd) p(3) * p(1) / 4 + K*(zd(1:12) - z(1:12));
+u1 = @(z, zd) p(3) * p(1) / 4 + K*(zd(1:12) - z(1:12)) - Ki(:,1:3)*z(13:15);
 u2 = @(z, zd) p(3) * p(1) / 4 + K*(zd(1:12) - z(1:12)) - Ki*z(13:24);
 
 % u = @(t,z,p,zd, A, B, K) quadrotor_feedback_linearization(t,z,p,zd, A,B,K);
@@ -35,20 +35,46 @@ speed = 100;
 tspan = linspace(0, speed*max, speed*max*100);
 % Initial conditions
 z0 = zeros(24,1);
-UAV = @(t) [sin(t); cos(t); t];
+UAV = @(t) [-10 + (10/2)*(t/speed); 10/2*sin(t/speed); 3*sin(t/(speed/10)) + 1;zeros(21,1)];
 % zd = @(t) [10*sin(t/speed); 10*cos(t/speed); sin(t/(speed/10))+10*t/tspan(end);zeros(21,1)];
-zd = @(t) [-10 + (10/2)*(t/speed); 10/2*sin(t/speed); 3*sin(t/(speed/10));zeros(21,1)];
-% z_acc = 0;
+zd = UAV;
 % Linear form
-[t,z] = ode45(@(t,z) quadrotor_switch(t, z, u1(z, zd(t)),u2(z,zd(t)), p, r1, r2,n1,n2, zd(t)), tspan, z0);
-% [t2,z2] = ode45(@(t,z, eta) quadrotor(t, z, u2(z, z0), p, r2, n2, z0), tspan, z(end,:));
+options = odeset('Event', @(t,z) catchDrone(t, z, zd(t), 0.1), 'RelTol', 0.1);
+[t,z, te, ze] = ode45(@(t,z) quadrotor(t, z, u1(z, zd(t)), p, r1, n1, zd(t)), tspan, z0, options);
+if(isempty(te))
+    disp("Failed to capture")
+else
+    disp("Captured! Returning to home")
+    [t2,z2] = ode45(@(t,z, eta) quadrotor(t, z, u2(z, z0), p, r_gen(2)', n_gen(2)', z0), tspan, z(end,:));
+end
 
-% Feedback Linearization
-% [t,z] = ode45(@(t,z) quadrotor(t, z, u(t,z, p, zd(t), A,B,K), p, r, n), tspan, z0);
-% [t2,z2] = ode45(@(t,z) quadrotor(t, z, u(t,z, p, z0, A,B,K), p, r, n), tspan, z(end,:));
-% t = [t;t2+t(end)];
-% z = [z;z2];
+%% trajectory vs measured
+h_trajectory = figure(1);
+hold on
+plot3(z(:,1), z(:,2), z(:,3),'Color','red','LineWidth',1)
+plot3(z2(:,1), z2(:,2), z2(:,3),'Color','blue','LineWidth',1)
+trajectory = zeros(length(tspan),24);
+idx = 1;
+for time = tspan
+    trajectory(idx,:) = zd(time);
+    idx=idx+1;
+end
+plot3(trajectory(:,1),trajectory(:,2),trajectory(:,3), 'Color','black','LineWidth',1,'LineStyle','--');
+view(3)
+hold off
+xlabel("x1")
+ylabel("x2")
+zlabel("x3")
+legend('Controlled Drone','UAV', 'Location','best')
+grid on
+xlim([-10 10])
+ylim([-10 10])
+zlim([-10 10])
+
 %% Plotting the results
+figure(2)
+t = [t; t2];
+z = [z; z2];
 
 for i=1:4
     ax(i) = subplot(2,2,i,'NextPlot','Add','Box','on','XGrid','on','YGrid','on',...
@@ -78,28 +104,6 @@ plot(ax(4), t, z(:,10:12), 'LineWidth', 1.5);
 legend(ax(4), {'$\omega_1$', '$\omega_2$', '$\omega_3$'},...
     'Interpreter', 'LaTeX', 'FontSize', 14);
 title(ax(4), '\boldmath$\omega$','Interpreter','LaTeX','FontSize',14);
-
-%% trajectory vs measured
-h_trajectory = figure(2);
-hold on
-plot3(z(:,1), z(:,2), z(:,3),'Color','red','LineWidth',1)
-trajectory = zeros(length(tspan),24);
-idx = 1;
-for time = tspan
-    trajectory(idx,:) = zd(time);
-    idx=idx+1;
-end
-plot3(trajectory(:,1),trajectory(:,2),trajectory(:,3), 'Color','black','LineWidth',1,'LineStyle','--');
-view(3)
-hold off
-xlabel("x1")
-ylabel("x2")
-zlabel("x3")
-legend('Controlled Drone','UAV', 'Location','best')
-grid on
-xlim([-10 10])
-ylim([-10 10])
-zlim([-10 10])
 
 % plot3(0,0,0,'filled')
 
@@ -158,4 +162,10 @@ for k=1:length(t)
         'ZData', [ctr([1 3],3); NaN; ctr([2 4],3)] );
     pause(t(k)-toc);
     pause(0.01);
+end
+
+function [value,isterminal,direction] = catchDrone(t, z, zd, epsilon)
+    value = norm( zd(1:3) - z(1:3)) > epsilon;
+    isterminal = 1; % = 1 -> the integration is to terminate.
+    direction = 0;
 end
