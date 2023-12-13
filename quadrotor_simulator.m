@@ -38,9 +38,10 @@ z0 = zeros(24,1);
 UAV = @(t) [sin(t); cos(t); t];
 % zd = @(t) [10*sin(t/speed); 10*cos(t/speed); sin(t/(speed/10))+10*t/tspan(end);zeros(21,1)];
 zd = @(t) [-10 + (10/2)*(t/speed); 10/2*sin(t/speed); 3*sin(t/(speed/10));zeros(21,1)];
+n2 = scaler_gen(1);
 % z_acc = 0;
 % Linear form
-[t,z] = ode45(@(t,z) quadrotor_switch(t, z, u1(z, zd(t)),u2(z,zd(t)), p, r1, r2,n1,n2, zd(t)), tspan, z0);
+[t,z] = ode45(@(t,z) quadrotor_switch(t, z, u1(z, zd(t)),u2(z,zd(t)), p, r1, scaler_gen(1),n1,n2, zd(t)), tspan, z0);
 % [t2,z2] = ode45(@(t,z, eta) quadrotor(t, z, u2(z, z0), p, r2, n2, z0), tspan, z(end,:));
 
 % Feedback Linearization

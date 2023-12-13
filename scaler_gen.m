@@ -8,7 +8,7 @@ function numbers = scaler_gen(n)
     end
 
     % Generate new numbers only every 100 calls
-    if counter == 0 || counter >= 10
+    if counter == 0 || counter >= 1000
         while true
             % Generate three random numbers between -1 and 1
             numbers = 2 * rand(3, 1) - 1;

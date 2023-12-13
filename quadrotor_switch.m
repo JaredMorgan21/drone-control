@@ -1,4 +1,11 @@
 function dz = quadrotor_switch(t, z, u1,u2,p, r1,r2, n1,n2, zd)
+persistent counter capflag
+% counter = 0;
+% capflag = false;
+if isempty(counter)
+        counter = 0;
+        capflag = false;
+end
 % State vector definition
 %
 %      x1, x2, x3, phi, theta, psi, dx1, dx2, dx3, omega1, omega2, omega3
@@ -9,7 +16,11 @@ function dz = quadrotor_switch(t, z, u1,u2,p, r1,r2, n1,n2, zd)
 %       g,  l,  m, I11, I22, I33, mu, sigma
 % p = [p1, p2, p3,  p4,  p5,  p6, p7,    p8]
 
-thres_dist_capture = 0.2/2;
+
+thres_dist_capture = 0.5/2;
+%%%%%%%%%%%
+%WW: Still need to change QR for this 
+%%%%%%%%%%%
 
 % Forming the moment of inertia tensor based on the parametr values
 I = diag(p(4:6)); 
@@ -22,11 +33,21 @@ R = [ cos(z(5))*cos(z(6)), sin(z(4))*sin(z(5))*cos(z(6)) - cos(z(4))*sin(z(6)), 
 % Adjusting thrust output based on feasible limits
 
 dist_capture = norm(z(1:3) - zd(1:3));
+
 if dist_capture <= thres_dist_capture % if captured
+    capflag = true;
+end
+
+if capflag == true
     u = u2;
     r = r2; % Note: Disturbance should be randomly generated (20231212: Ryo)
-    n = n2;
+    % n = n2;
+    % r = [0;0;2];
+    n = [0;0;0];
     flag_mode = 1; % captured
+    zd = zeros(12,1);
+    counter = counter + 1;
+    dist_capture = 0;
     %%%%%%%%%%%%%
     % Ryo
     %%%%%%
@@ -51,6 +72,7 @@ disp(str_disp);
 
 u = max(min(u, p(7)), 0);
 disp(u);
+disp(counter);
 disp('-------------')
 
 % Computing temporrary variables
