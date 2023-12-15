@@ -31,7 +31,7 @@ u2 = @(z, zd) p(3) * p(1) / 4 + K*(zd(1:12) - z(1:12)) - Ki*z(13:24);
 
 %% Solving the initial-value problem
 maximum = 20;
-speed = 60;
+speed = 6;
 tspan = linspace(0, speed*maximum, speed*maximum*100);
 % Initial conditions
 z0 = zeros(24,1);
