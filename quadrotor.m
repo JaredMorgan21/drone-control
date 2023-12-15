@@ -25,7 +25,7 @@ u = max(min(u, p(7)), 0);
 z(1:3) - zd(1:3);
 
 dist_capture = norm(z(1:3) - zd(1:3));
-r
+r;
 % Computing temporrary variables
 
 % rt = torque vector induced by rotor thrusts

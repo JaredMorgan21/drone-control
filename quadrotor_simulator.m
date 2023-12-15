@@ -30,12 +30,13 @@ u2 = @(z, zd) p(3) * p(1) / 4 + K*(zd(1:12) - z(1:12)) - Ki*z(13:24);
 % u = @(t,z,p,zd, A, B, K) quadrotor_feedback_linearization(t,z,p,zd, A,B,K);
 
 %% Solving the initial-value problem
-max = 2*pi;
-speed = 100;
-tspan = linspace(0, speed*max, speed*max*100);
+maximum = 20;
+speed = 60;
+tspan = linspace(0, speed*maximum, speed*maximum*100);
 % Initial conditions
 z0 = zeros(24,1);
-UAV = @(t) [-10 + (10/2)*(t/speed); 10/2*sin(t/speed); 3*sin(t/(speed/10)) + 1;zeros(21,1)];
+UAV = @(t) [-10 + t/speed; 10*cos(t/speed); 10*sin(t/speed);zeros(21,1)];
+UAVspeed = (norm(UAV(2)-UAV(1))/(tspan(2) - tspan(1)))
 % zd = @(t) [10*sin(t/speed); 10*cos(t/speed); sin(t/(speed/10))+10*t/tspan(end);zeros(21,1)];
 zd = UAV;
 % Linear form
@@ -45,7 +46,8 @@ if(isempty(te))
     disp("Failed to capture")
 else
     disp("Captured! Returning to home")
-    [t2,z2] = ode45(@(t,z, eta) quadrotor(t, z, u2(z, z0), p, r_gen(2)', n_gen(2)', z0), tspan, z(end,:));
+    options = odeset('Event', @(t,z) catchDrone(t, z, z0, 0.1), 'RelTol', 0.1);
+    [t2,z2] = ode45(@(t,z, eta) quadrotor(t, z, u2(z, z0), p, r_gen(2)', n_gen(2)', z0), tspan, z(end,:), options);
 end
 
 %% trajectory vs measured
@@ -73,7 +75,7 @@ zlim([-10 10])
 
 %% Plotting the results
 figure(2)
-t = [t; t2];
+t = [t; t2 + t(end)];
 z = [z; z2];
 
 for i=1:4

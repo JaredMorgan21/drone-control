@@ -8,7 +8,7 @@ function numbers = n_gen(n)
     end
 
     % Generate new numbers only every 100 calls
-    if counter == 0 || counter >= 10000
+    if counter == 0 || counter >= 5000
         while true
             % Generate three random numbers between -1 and 1
             numbers(1) = 0.2 * rand(1) - 0.1;
